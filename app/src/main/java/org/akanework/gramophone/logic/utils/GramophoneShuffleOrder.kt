@@ -1,0 +1,254 @@
+/*
+ *     Copyright (C) 2024 nift4
+ *
+ *     Gramophone is free software: you can redistribute it and/or modify
+ *     it under the terms of the GNU General Public License as published by
+ *     the Free Software Foundation, either version 3 of the License, or
+ *     (at your option) any later version.
+ *
+ *     Gramophone is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ *     You should have received a copy of the GNU General Public License
+ *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package org.akanework.gramophone.logic.utils
+
+import android.os.Parcelable
+import androidx.media3.common.C
+import androidx.media3.common.util.BackgroundExecutor
+import androidx.media3.common.util.Log
+import androidx.media3.exoplayer.source.ShuffleOrder
+import kotlinx.parcelize.Parcelize
+import org.akanework.gramophone.logic.utils.exoplayer.EndedWorkaroundPlayer
+import kotlin.random.Random
+
+/**
+ * This shuffle order will take "firstIndex" as first song and play all songs after it.
+ */
+class CircularShuffleOrder private constructor(
+    private val listener: EndedWorkaroundPlayer,
+    private val shuffled: IntArray,
+    private val seed: Long,
+    private val random: Random,
+    val lastSeed: Long?
+) : ShuffleOrder {
+    private val indexInShuffled = IntArray(shuffled.size)
+
+    init {
+        for (i in shuffled.indices) {
+            indexInShuffled[shuffled[i]] = i
+        }
+    }
+
+    companion object {
+        private const val TAG = "GramophoneShuffleOrder"
+        private fun calculateShuffledList(offset: Int, length: Int, random: Random): IntArray {
+            val shuffled = IntArray(length)
+            var swapIndex: Int
+            for (i in shuffled.indices) {
+                swapIndex = random.nextInt(i + 1)
+                shuffled[i] = shuffled[swapIndex]
+                shuffled[swapIndex] = offset + i
+            }
+            return shuffled
+        }
+
+        private fun calculateListWithFirstIndex(shuffled: IntArray, firstIndex: Int): IntArray {
+            if (shuffled.isEmpty() && firstIndex == 0) return shuffled
+            if (shuffled.size <= firstIndex) throw IllegalArgumentException("${shuffled.size} <= $firstIndex")
+            val fi = shuffled.indexOf(firstIndex)
+            val before = shuffled.slice(0..<fi)
+            val inclAndAfter = shuffled.slice(fi..<shuffled.size)
+            return (inclAndAfter + before).toIntArray()
+        }
+    }
+
+    private constructor(
+        listener: EndedWorkaroundPlayer,
+        firstIndex: Int,
+        length: Int,
+        seed: Long,
+        random: Random,
+        lastSeed: Long?
+    ) :
+            this(
+                listener,
+                calculateListWithFirstIndex(calculateShuffledList(0, length, random), firstIndex),
+                seed, random, lastSeed
+            )
+
+    constructor(
+        listener: EndedWorkaroundPlayer,
+        firstIndex: Int,
+        length: Int,
+        randomSeed: Long,
+        lastSeed: Long? = null
+    ) :
+            this(listener, firstIndex, length, randomSeed, Random(randomSeed), lastSeed)
+
+    constructor(
+        listener: EndedWorkaroundPlayer,
+        shuffledIndices: IntArray,
+        randomSeed: Long,
+        lastSeed: Long?
+    ) :
+            this(listener, shuffledIndices.copyOf(), randomSeed, Random(randomSeed), lastSeed)
+
+    override fun getLength(): Int {
+        return shuffled.size
+    }
+
+    override fun getNextIndex(index: Int): Int {
+        val shuffledIndex = indexInShuffled[index] + 1
+        return if (shuffledIndex < shuffled.size) shuffled[shuffledIndex] else C.INDEX_UNSET
+    }
+
+    override fun getPreviousIndex(index: Int): Int {
+        val shuffledIndex = indexInShuffled[index] - 1
+        return if (shuffledIndex >= 0) shuffled[shuffledIndex] else C.INDEX_UNSET
+    }
+
+    override fun getLastIndex(): Int {
+        return if (shuffled.isNotEmpty()) shuffled[shuffled.size - 1] else C.INDEX_UNSET
+    }
+
+    override fun getFirstIndex(): Int {
+        return if (shuffled.isNotEmpty()) shuffled[0] else C.INDEX_UNSET
+    }
+
+    // This shuffles the inserted items among themselves and then adds them after
+    // the previous index into shuffled - so if song A is playing and we add three songs B, C and D,
+    // B,C,D will be shuffled among themselves to ie D,B,C and then this list will be inserted after
+    // A so that song list will now be A,D,B,C,...
+    override fun cloneAndInsert(insertionIndex: Int, insertionCount: Int): ShuffleOrder {
+        listener.nextShuffleOrder?.let { next ->
+            listener.nextShuffleOrder = null
+            val nextShuffleOrder = next.create(insertionIndex,
+                shuffled.size + insertionCount, listener)
+            if (nextShuffleOrder.length == shuffled.size + insertionCount)
+                return nextShuffleOrder
+            // We can't throw here as it would permanently break the ExoPlayer and cause app crash
+            // with a weird stacktrace that isn't obviously related. But this _is_ a fatal error:
+            // crash another thread. We shouldn't ever get here with wrong data.
+            BackgroundExecutor.get().execute {
+                throw IllegalStateException(
+                    "next shuffle order size ${nextShuffleOrder.length} " +
+                            "does not match requested ${shuffled.size + insertionCount}"
+                )
+            }
+        }
+        // the original list: [0, 1, 2] shuffled: [2, 0, 1] indexInShuffled: [1, 2, 0]
+        // insertionIndex for adding after 1 would be 2, 2 is at index 0 in shuffled list, after 0
+        // would be 1 so we want to insert into shuffled at index 1 here.
+        // If insertionIndex is 0, just add it to the very beginning.
+        val insertionPoint = if (insertionIndex > 0) indexInShuffled[insertionIndex - 1] + 1 else 0
+        val insertionValues = calculateShuffledList(insertionIndex, insertionCount, random)
+        val newShuffled = IntArray(shuffled.size + insertionCount)
+        var indexInInsertionList = 0
+        var indexInOldShuffled = 0
+
+        for (i in 0 until shuffled.size + insertionCount) {
+            if (indexInInsertionList < insertionCount && indexInOldShuffled == insertionPoint) {
+                newShuffled[i] = insertionValues[indexInInsertionList++]
+            } else {
+                newShuffled[i] = shuffled[indexInOldShuffled++]
+                if (newShuffled[i] >= insertionIndex) {
+                    newShuffled[i] += insertionCount
+                }
+            }
+        }
+
+        return CircularShuffleOrder(listener, newShuffled, random.nextLong(), seed)
+    }
+
+    override fun cloneAndSet(insertionCount: Int, startIndex: Int): ShuffleOrder {
+        if (listener.nextShuffleOrder == null && startIndex != C.INDEX_UNSET) {
+            return CircularShuffleOrder(
+                listener, startIndex, insertionCount,
+                random.nextLong()
+            )
+        }
+        // fall back to super which calls cloneAndInsert() which will process next shuffle order
+        // or just randomly shuffles as appropriate
+        return super.cloneAndSet(insertionCount, startIndex)
+    }
+
+    override fun cloneAndRemove(indexFrom: Int, indexToExclusive: Int): ShuffleOrder {
+        val numberOfElementsToRemove = indexToExclusive - indexFrom
+        // short-circuit for performance and because this is allowed if nextShuffleOrder is set
+        if (numberOfElementsToRemove == shuffled.size)
+            return CircularShuffleOrder(listener, 0, 0, random.nextLong(), seed)
+        if (listener.nextShuffleOrder != null)
+            throw IllegalStateException("next shuffle order present but removing some items")
+        val newShuffled = IntArray(shuffled.size - numberOfElementsToRemove)
+        var foundElementsCount = 0
+
+        for (i in shuffled.indices) {
+            if (shuffled[i] in indexFrom..<indexToExclusive) {
+                ++foundElementsCount
+            } else {
+                newShuffled[i - foundElementsCount] =
+                    if (shuffled[i] >= indexFrom) shuffled[i] - numberOfElementsToRemove else shuffled[i]
+            }
+        }
+
+        return CircularShuffleOrder(listener, newShuffled, random.nextLong(), seed)
+    }
+
+    override fun cloneAndMove(
+        indexFrom: Int,
+        indexToExclusive: Int,
+        newIndexFrom: Int
+    ): ShuffleOrder {
+        return cloneAndRemove(indexFrom, indexToExclusive)
+            .cloneAndInsert(newIndexFrom, indexToExclusive - indexFrom)
+    }
+
+    override fun cloneAndClear(): ShuffleOrder {
+        return cloneAndRemove(0, shuffled.size)
+    }
+
+    @Parcelize
+    class Persistent private constructor(val seed: Long, val data: IntArray?) : Parcelable {
+        constructor(order: CircularShuffleOrder) : this(order.random.nextLong(), order.shuffled)
+        constructor(seed: Long) : this(seed, null)
+
+        companion object {
+            fun deserialize(data: String?): Persistent {
+                if (data == null || data.length < 2) return Persistent(Random.nextLong(), null)
+                val split = data.split(';')
+                if (split.isEmpty()) return Persistent(Random.nextLong(), null)
+                return try {
+                    Persistent(
+                        split[0].toLong(), if (split.size > 1) split[1]
+                            .split(',').map(String::toInt).toIntArray() else null
+                    )
+                } catch (e: NumberFormatException) {
+                    // might happen with some real bad luck?
+                    Log.e(
+                        TAG,
+                        "gave up trying to restore shuffle order: " + Log.getThrowableString(e)!!
+                    )
+                    Persistent(Random.nextLong(), null)
+                }
+            }
+        }
+
+        override fun toString(): String {
+            return if (data != null) "$seed;${data.joinToString(",")}" else seed.toString()
+        }
+
+        fun create(firstIndex: Int, mediaItemCount: Int, it: EndedWorkaroundPlayer): CircularShuffleOrder {
+            return if (data == null) {
+                CircularShuffleOrder(it, firstIndex, mediaItemCount, seed)
+            } else {
+                CircularShuffleOrder(it, data, seed, null)
+            }
+        }
+    }
+
+}

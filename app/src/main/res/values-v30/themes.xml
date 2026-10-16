@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="V30.Theme.Gramophone" parent="V29.Theme.Gramophone">
+        <!-- true edge-to-edge, no black bars in display notch -->
+        <item name="android:windowLayoutInDisplayCutoutMode">always</item>
+    </style>
+
+    <style name="Theme.Gramophone" parent="V30.Theme.Gramophone" />
+</resources>

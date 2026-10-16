@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- for Studio profiler -->
+    <bool name="leak_canary_allow_in_non_debuggable_build">true</bool>
+    <bool name="has_xspf">false</bool>
+    <bool name="missing_xspf">true</bool>
+</resources>

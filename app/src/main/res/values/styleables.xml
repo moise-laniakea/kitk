@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="MyTextAppearance">
+        <attr name="textFontWeight" format="integer" />
+    </declare-styleable>
+    <declare-styleable name="MyTooltipCompat">
+        <attr name="tooltipText" format="string" />
+    </declare-styleable>
+    <declare-styleable name="AppWidget">
+        <attr name="system_app_widget_background_radius" format="dimension" />
+        <attr name="system_app_widget_inner_radius" format="dimension" />
+    </declare-styleable>
+    <declare-styleable name="MyRecyclerView">
+        <attr name="hasFixedSize" format="boolean" />
+        <attr name="useGridPaddingDecoration" format="boolean" />
+    </declare-styleable>
+    <declare-styleable name="ThemeAttrs">
+        <attr name="previewPlayerElevation" format="dimension" />
+    </declare-styleable>
+</resources>

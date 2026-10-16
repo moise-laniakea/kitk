@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="theme_switch" translatable="false">>
+        <item>@string/follow_system</item>
+        <item>@string/dark</item>
+        <item>@string/light</item>
+    </string-array>
+
+    <string-array name="theme_switch_val" translatable="false">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+    </string-array>
+
+    <string-array name="rg_mode_switch" translatable="false">>
+        <item>@string/disabled</item>
+        <item>@string/track_gain</item>
+        <item>@string/album_gain</item>
+        <item>@string/smart</item>
+    </string-array>
+
+    <string-array name="rg_mode_switch_val" translatable="false">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
+
+    <string-array name="offload_switch" translatable="false">>
+        <item>@string/disabled</item>
+        <item>@string/offload_enabled_if_gapless</item>
+        <item>@string/offload_enabled_if_supported</item>
+    </string-array>
+
+    <string-array name="offload_switch_val" translatable="false">
+        <item>0</item>
+        <item>2</item>
+        <item>1</item>
+    </string-array>
+
+    <string-array name="shuffle_all_queries" translatable="false">
+        <item>@string/actions_query_shuffle_all_songs</item>
+        <item>@string/actions_query_shuffle_everything</item>
+        <item>@string/actions_query_shuffle_specific</item>
+        <item>@string/actions_query_play_random_songs</item>
+        <item>@string/actions_query_play_random_stuff</item>
+        <item>@string/actions_query_play_randomly</item>
+        <item>@string/actions_query_start_random_music</item>
+        <item>@string/actions_query_start_random_songs</item>
+    </string-array>
+</resources>

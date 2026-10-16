@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="org.akanework.gramophone">
+
+    <uses-feature android:name="android.hardware.audio.output" android:required="false"/>
+    <uses-feature android:name="android.hardware.audio.pro" android:required="false"/>
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false"/>
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false"/>
+    <uses-feature android:name="android.hardware.faketouch" android:required="false"/>
+    <uses-feature android:name="android.hardware.usb.host" android:required="false"/>
+    <uses-feature android:name="android.hardware.type.pc" android:required="false"/>
+    <uses-feature android:name="android.software.app_widgets" android:required="false"/>
+
+    <!-- Notifications (for error handling on MIUI) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"
+        android:minSdkVersion="33" />
+    <!-- Read music files (Android 13 and later) (includes .lrc and thumbnails) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"
+        android:minSdkVersion="33" />
+    <!-- Read cover files, this is never requested by UI but exists for users who want it -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"
+        android:minSdkVersion="33"
+        tools:ignore="PhotoAndVideoPolicy" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED"
+        android:minSdkVersion="34" />
+    <!-- Read music files, .lrc files and cover files (Android 12 and earlier) -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <!-- Required for editing playlists via MediaStore and deleting songs (Android 10 and earlier) -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29"
+        tools:ignore="ScopedStorage" />
+    <!-- Run music playback service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"
+	    tools:ignore="ForegroundServicesPolicy" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+        android:minSdkVersion="34" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Remove ExoPlayer permission as we don't network playback -->
+    <uses-permission
+        android:name="android.permission.ACCESS_NETWORK_STATE"
+        tools:node="remove" />
+    <!-- Bluetooth device information -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <application
+        android:name=".logic.GramophoneApplication"
+        android:allowBackup="true"
+        android:appCategory="audio"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true"
+        android:label="@string/app_name"
+        android:requestLegacyExternalStorage="true"
+        android:resizeableActivity="true"
+        android:supportsRtl="true"
+        android:largeHeap="true"
+        android:theme="@style/Theme.Gramophone"
+        android:windowSoftInputMode="adjustResize"
+        tools:targetApi="upside_down_cake">
+        <meta-data
+            android:name="androidx.car.app.TintableAttributionIcon"
+            android:resource="@drawable/ic_gramophone_monochrome" />
+        <meta-data
+            android:name="com.google.android.gms.car.application.theme"
+            android:resource="@style/Theme.Gramophone"/>
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc"/>
+        <activity
+            android:name=".logic.ui.BugHandlerActivity"
+            android:exported="false"
+            android:taskAffinity="org.akanework.gramophone.crashLog" />
+
+        <service
+            android:name=".logic.GramophonePlaybackService"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+                <action android:name="androidx.media3.session.MediaLibraryService" />
+                <action android:name="androidx.media3.session.MediaSessionService" />
+            </intent-filter>
+        </service>
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:theme="@style/Theme.Splash"
+            android:exported="true"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <!-- no extras -->
+                <action android:name="android.intent.action.MAIN" />
+                <!-- extras: query(str) -->
+                <action android:name="android.intent.action.SEARCH" />
+                <!-- no extras -->
+                <action android:name="android.intent.action.MUSIC_PLAYER" />
+                <!-- extras: borrowed from https://developer.android.com/guide/components/intents-common#PlaySearch -->
+                <action android:name="android.intent.action.MEDIA_SEARCH" />
+                <!-- extras: https://developer.android.com/guide/components/intents-common#PlaySearch -->
+                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
+                <!-- extras: item_name(str) -->
+                <action android:name="org.akanework.gramophone.action.SHUFFLE" />
+                <!-- extras: query(str) -->
+                <action android:name="com.google.android.gms.actions.SEARCH_ACTION"/>
+
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:mimeType="vnd.android.cursor.dir/playlist" />
+            </intent-filter>
+
+            <meta-data android:name="android.app.searchable"
+                android:resource="@xml/searchable" />
+            <meta-data android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity>
+
+        <activity
+            android:name=".ui.SongPickerActivity"
+            android:label="@string/picker_activity"
+            android:exported="true"
+            android:taskAffinity="">
+            <intent-filter android:priority="-1">
+                <action android:name="android.intent.action.GET_CONTENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="audio/*"/>
+                <data android:mimeType="application/ogg"/>
+                <data android:mimeType="application/x-ogg"/>
+                <data android:mimeType="application/x-flac"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.PICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="vnd.android.cursor.dir/audio"/>
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.PlaylistPickerActivity"
+            android:label="@string/playlist_picker_activity"
+            android:exported="true"
+            android:enabled="@bool/has_xspf"
+            android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.intent.action.GET_CONTENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+
+                <data android:mimeType="application/vnd.apple.mpegurl"/>
+                <data android:mimeType="application/vnd.ms-wpl"/>
+                <data android:mimeType="application/x-mpegurl"/>
+                <data android:mimeType="application/xspf+xml"/>
+                <data android:mimeType="audio/mpegurl"/>
+                <data android:mimeType="audio/x-mpegurl"/>
+                <data android:mimeType="audio/x-scpls"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.PICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="vnd.android.cursor.dir/playlist"/>
+            </intent-filter>
+        </activity>
+
+        <activity-alias
+            android:targetActivity=".ui.PlaylistPickerActivity"
+            android:name=".ui.PlaylistPickerActivityLegacy"
+            android:label="@string/playlist_picker_activity"
+            android:enabled="@bool/missing_xspf"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.GET_CONTENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+
+                <data android:mimeType="application/vnd.apple.mpegurl"/>
+                <data android:mimeType="application/vnd.ms-wpl"/>
+                <data android:mimeType="application/x-mpegurl"/>
+                <data android:mimeType="audio/mpegurl"/>
+                <data android:mimeType="audio/x-mpegurl"/>
+                <data android:mimeType="audio/x-scpls"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.PICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="vnd.android.cursor.dir/playlist"/>
+            </intent-filter>
+        </activity-alias>
+
+        <activity
+            android:name=".ui.AudioPreviewActivity"
+            android:theme="@style/Theme.AudioPreviewDialogTheme"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- TODO add this <category android:name="android.intent.category.TYPED_OPENABLE" /> -->
+
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="application/ogg"/>
+                <data android:mimeType="application/x-ogg"/>
+                <data android:mimeType="application/itunes"/>
+                <data android:mimeType="application/x-flac"/>
+                <data android:mimeType="vnd.android.cursor.dir/audio" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name=".logic.utils.MediaButtonReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </receiver>
+
+        <provider
+            android:name=".logic.SearchSuggestionsProvider"
+            android:authorities="${applicationId}.search"
+            android:exported="true"
+            android:readPermission="android.permission.GLOBAL_SEARCH" />
+
+        <!--
+            Security: this provider is carefully designed to not leak more data than what the
+            platform media provider publicly shares (which is required for legacy flows such as
+            MediaSession queue).
+        -->
+        <provider
+            android:name=".logic.GramophoneAlbumArtProvider"
+            android:authorities="${applicationId}.albumart"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            tools:ignore="ExportedContentProvider" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileProvider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <receiver android:name=".ui.LyricWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/lyric_widget" />
+        </receiver>
+
+        <service android:name=".ui.LyricWidgetService"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+
+        <activity
+            android:name=".ui.fragments.settings.PlayerSettingsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.fragments.settings.LyricSettingsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.fragments.settings.ReplayGainSettingsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.fragments.settings.AboutSettingsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.fragments.settings.AudioSettingsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.fragments.settings.AppearanceSettingsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.fragments.settings.BehaviorSettingsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.fragments.settings.MainSettingsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.fragments.settings.ExperimentalSettingsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.fragments.settings.ContributorsSettingsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.fragments.settings.BlacklistSettingsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.fragments.settings.OssLicensesSettingsActivity"
+            android:exported="false" />
+
+        <!-- allow multi-resume for some Android 9 devices in multi-window -->
+        <meta-data android:name="android.allow_multiple_resumed_activities" android:value="true" />
+    </application>
+
+    <queries>
+        <intent>
+            <action android:name="android.media.action.DISPLAY_AUDIO_EFFECT_CONTROL_PANEL" />
+        </intent>
+
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
+    </queries>
+
+</manifest>

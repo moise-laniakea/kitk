@@ -1,0 +1,15 @@
+{
+  "uniqueId": "com.beatofthedrum.alacdecoder:alacdecoder",
+  "developers": [{
+    "name": "Peter McQuillan",
+    "organisationUrl": "https://github.com/soiaf"
+  }],
+  "artifactVersion": "afd5bf3",
+  "description": "Apple Lossless decoder written in Java.",
+  "name": "Java-Apple-Lossless-decoder",
+  "tag": "custom",
+  "website": "https://github.com/soiaf/Java-Apple-Lossless-decoder",
+  "licenses": [
+    "BSD-3-Clause"
+  ]
+}

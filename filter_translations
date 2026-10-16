@@ -1,0 +1,169 @@
+#!/usr/bin/env python
+import os
+import sys
+import shutil
+import asyncio
+from pathlib import Path
+
+import aiohttp
+import aiohttp_retry
+from lxml import etree
+
+
+WEBLATE_API = "https://hosted.weblate.org/api"
+PROJECT_SLUG = "gramophone"
+API_TOKEN = os.getenv("WEBLATE_TOKEN")
+HEADERS = {
+    "Authorization": f"Token {API_TOKEN}",
+    "Accept": "application/json",
+}
+MAX_RETRIES = 4
+MIN_TRANSLATED_PERCENT = 60
+
+
+async def get_languages(session: aiohttp.ClientSession, component_slug: str) -> list:
+    url = f"{WEBLATE_API}/components/{PROJECT_SLUG}/{component_slug}/translations/"
+    async with session.get(url, headers=HEADERS) as response:
+        result = await response.json()
+        languages = result.get('results')
+    return languages
+
+
+async def get_units_list(session: aiohttp.ClientSession, language_code: str, component_slug: str) -> list:
+    url = f"{WEBLATE_API}/translations/{PROJECT_SLUG}/{component_slug}/{language_code}/units/"
+    params = {'q': 'state:<translated', 'page_size': 500}
+
+    async with session.get(url, headers=HEADERS, params=params) as response:
+        data = await response.json()
+        units = data.get("results")
+
+    print(f'\nGot {len(units)} {component_slug} units for language code "{language_code}".')
+    return units
+
+
+def delete_strings(xml_file: Path, names_to_delete: list[str]) -> None:
+    """
+    Deletes entire <string> elements from Android string resources XML
+    while preserving all formatting, comments, and XML structure
+    """
+    # Create parser with full preservation settings
+    parser = etree.XMLParser(
+        remove_blank_text=False,
+        remove_comments=False,
+        remove_pis=False,
+        strip_cdata=False,
+        resolve_entities=False
+    )
+
+    source_file_path = Path(sys.argv[1]).joinpath(xml_file)
+    tree = etree.parse(source_file_path, parser)
+    if names_to_delete:
+        root = tree.getroot()
+
+        # Find all string elements
+        for elem in root.xpath('//string | //plurals | //string-array'):
+            name = elem.get('name')
+            if name in names_to_delete:
+                parent = elem.getparent()
+                parent.remove(elem)
+        print("  Deleted strings:", ", ".join(names_to_delete))
+    else:
+        print("  No strings to delete")
+
+    xml_file.parent.mkdir(parents=True, exist_ok=True)
+    tree.write(
+        str(xml_file),
+        encoding='utf-8',
+        xml_declaration=True,
+        pretty_print=False,
+        with_comments=True,
+        method="xml"
+    )
+    print(f"  Updated XML file: {xml_file}")
+
+
+def manage_fastlane_files(files_path: Path, editings: list[str]) -> None:
+    """Deletes all of the files if any of them is missing or needs editing"""
+    source_files_path = Path(sys.argv[1]).joinpath(files_path)
+    if not source_files_path.exists():
+        print(f"  Fastlane directory does not exist: {source_files_path}")
+        return
+
+    if sys.argv[1] != os.getcwd():
+        if Path(files_path).exists():
+            shutil.rmtree(files_path)
+        shutil.copytree(source_files_path, files_path)
+
+    if not source_files_path.joinpath('title.txt').exists():
+        with open(Path(files_path).joinpath('title.txt'), 'w') as title_file:
+            title_file.write('Gramophone')
+
+    files = ["short_description.txt", "full_description.txt"]
+    unfinished = any(file.split(":")[0] in files + ["title.txt"] for file in editings)
+    all_exist = all(source_files_path.joinpath(f).exists() for f in files)
+    delete_files = not all_exist or unfinished
+    if not delete_files:
+        print("  Skipped deleting")
+        return
+
+    print(f"  Deleting files in {files_path}")
+    for file in files + ["title.txt"]:
+        file_path = files_path.joinpath(file)
+        if file_path.exists():
+            os.remove(file_path)
+
+
+async def filter_component(session: aiohttp.ClientSession, language: dict, component_slug: str):
+    if language['is_source']:
+        return
+
+    language_code = language['language']['code']
+    translated_percent = language['translated_percent']
+    filepath = Path(language['filename'])
+    unfinished_units = await get_units_list(session, language_code, component_slug)
+    units_context = [u.get('context') for u in unfinished_units]
+
+    if component_slug == "strings-xml":
+        if translated_percent < MIN_TRANSLATED_PERCENT:
+            print(f"  Translations amount ({translated_percent}%) "
+                  f"is below the minimum ({MIN_TRANSLATED_PERCENT}%)")
+            if filepath.exists():
+                shutil.rmtree(filepath.parent)
+                print(f"  Deleted {filepath.parent}/")
+        else:
+            delete_strings(filepath, units_context)
+
+    elif component_slug == "fastlane":
+        print(f"  Files to delete: {units_context}")
+        manage_fastlane_files(filepath, units_context)
+
+
+async def main():
+    if not API_TOKEN:
+        print("$WEBLATE_TOKEN environment variable is not set!")
+        sys.exit(1)
+
+    retry_options = aiohttp_retry.ExponentialRetry(
+        attempts=MAX_RETRIES,
+        start_timeout=1,
+        max_timeout=8,
+        factor=2,
+    )
+    async with aiohttp_retry.RetryClient(raise_for_status=False, retry_options=retry_options) as client:
+        sem = asyncio.Semaphore(10)
+        async with sem:
+            print("Filtering strings-xml...")
+            languages = await get_languages(client, "strings-xml")
+            tasks = [asyncio.create_task(filter_component(client, language, "strings-xml"))
+                     for language in languages]
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+            print("\n\nFiltering fastlane...")
+            fastlane_languages = await get_languages(client, "fastlane")
+            fastlane_tasks = [asyncio.create_task(filter_component(client, language, "fastlane"))
+                              for language in fastlane_languages]
+            await asyncio.gather(*fastlane_tasks, return_exceptions=True)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
