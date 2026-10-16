@@ -1,0 +1,3 @@
+-keep class com.moise.laniakea.data.db.** { *; }
+-keep class androidx.media3.decoder.ffmpeg.** { *; }
+-dontwarn org.jaudiotagger.**
