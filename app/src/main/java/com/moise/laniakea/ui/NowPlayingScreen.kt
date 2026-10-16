@@ -183,7 +183,8 @@ private fun Controls(
             }
         }
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+        @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+        androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             IconButton({ song?.let { vm.toggleFavorite(it) } }) {
                 Icon(if (song?.favorite == true) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "Favorite")
             }
