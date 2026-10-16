@@ -39,6 +39,7 @@ sleep 4
 adb exec-out screencap -p > out/shot3_now_playing.png
 
 adb logcat -d -s MoiseScan:V > out/logcat_scan.txt 2>&1
+adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb shell cat /sdcard/ui.xml > out/ui_dump.xml 2>&1
 PID=$(adb shell pidof $PKG | tr -d '\r')
 adb logcat -d --pid=$PID > out/logcat_app.txt 2>&1
 adb logcat -d -t 3000 > out/logcat_full.txt

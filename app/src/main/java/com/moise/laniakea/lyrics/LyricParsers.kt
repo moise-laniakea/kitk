@@ -25,7 +25,7 @@ object LyricParsers {
     /** Used for embedded lyrics tags where there is no file extension to go on. */
     fun sniff(text: String): Lyrics? = when {
         text.contains("<tt", true) && text.contains("<p", true) -> parseTtml(text)
-        Regex("""\[\d+:\d+(?:[.:]\d+)?]""").containsMatchIn(text) -> parseLrc(text)
+        Regex("""\[\d+:\d+(?:[.:]\d+)?\]""").containsMatchIn(text) -> parseLrc(text)
         text.contains("-->") -> parseSrt(text)
         text.contains("[Events]", true) -> parseAss(text)
         else -> parsePlain(text)
@@ -41,9 +41,9 @@ object LyricParsers {
 
     // ---- LRC (incl. enhanced word tags <mm:ss.xx>) ------------------------------------------------
 
-    private val lrcLineTs = Regex("""\[(\d+):(\d{1,2})(?:[.:](\d{1,3}))?]""")
+    private val lrcLineTs = Regex("""\[(\d+):(\d{1,2})(?:[.:](\d{1,3}))?\]""")
     private val lrcWordTs = Regex("""<(\d+):(\d{1,2})(?:[.:](\d{1,3}))?>""")
-    private val lrcOffset = Regex("""^\[offset:\s*(-?\d+)\s*]""", RegexOption.IGNORE_CASE)
+    private val lrcOffset = Regex("""^\[offset:\s*(-?\d+)\s*\]""", RegexOption.IGNORE_CASE)
 
     private fun ts(m: String, s: String, frac: String?): Long {
         val fracMs = when (frac?.length) {
@@ -211,7 +211,7 @@ object LyricParsers {
     // ---- SSA / ASS (with \k karaoke syllable timing) -------------------------------------------------
 
     private val assTime = Regex("""(\d+):(\d{2}):(\d{2})[.](\d{1,2})""")
-    private val assTag = Regex("""\{[^}]*}""")
+    private val assTag = Regex("""\{[^}]*\}""")
     private val assK = Regex("""\\[kK][fo]?(\d+)""")
 
     private fun assMs(s: String): Long {
@@ -241,7 +241,7 @@ object LyricParsers {
                 val words = ArrayList<LyricWord>()
                 // Split on override blocks; each block that carries \k starts a new syllable.
                 var cursor = start
-                val blocks = Regex("""\{([^}]*)}([^{]*)""").findAll(body).toList()
+                val blocks = Regex("""\{([^}]*)\}([^{]*)""").findAll(body).toList()
                 for (b in blocks) {
                     val k = assK.find(b.groupValues[1]) ?: continue
                     val dur = k.groupValues[1].toLong() * 10
