@@ -1,0 +1,2 @@
+--------- beginning of main
+10-16 08:40:39.366  4741  4811 I MoiseScan: Scan: MediaStore rows=1, new=1, already indexed=0, duplicates=0

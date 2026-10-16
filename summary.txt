@@ -1,0 +1,24 @@
+=== FATAL / crash ===
+
+=== app errors/warnings (own process) ===
+10-16 08:40:37.178  4741  4741 W .moise.laniakea: Unexpected CPU variant for x86: x86_64.
+10-16 08:40:37.178  4741  4741 W .moise.laniakea: Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, tremont, kabylake, default
+10-16 08:40:37.407  4741  4741 W ziparchive: Unable to open '/data/app/~~uxl0G4ohBss3uQ2HK6ehpA==/com.moise.laniakea-CL208cJv6hgXnE6uZ27JwA==/base.dm': No such file or directory
+10-16 08:40:37.407  4741  4741 W ziparchive: Unable to open '/data/app/~~uxl0G4ohBss3uQ2HK6ehpA==/com.moise.laniakea-CL208cJv6hgXnE6uZ27JwA==/base.dm': No such file or directory
+10-16 08:40:38.271  4741  4741 W OpenGLRenderer: Unknown dataspace 0
+10-16 08:40:38.744  4741  4741 W .moise.laniakea: Method boolean androidx.compose.runtime.snapshots.SnapshotStateList.conditionalUpdate(boolean, kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+10-16 08:40:38.744  4741  4741 W .moise.laniakea: Common causes for lock verification issues are non-optimized dex code
+10-16 08:40:38.744  4741  4741 W .moise.laniakea: and incorrect proguard optimizations.
+10-16 08:40:38.753  4741  4741 W .moise.laniakea: Method boolean androidx.compose.runtime.snapshots.SnapshotStateList.conditionalUpdate$default(androidx.compose.runtime.snapshots.SnapshotStateList, boolean, kotlin.jvm.functions.Function1, int, java.lang.Object) failed lock verification and will run slower.
+10-16 08:40:38.753  4741  4741 W .moise.laniakea: Method java.lang.Object androidx.compose.runtime.snapshots.SnapshotStateList.mutate(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+10-16 08:40:38.753  4741  4741 W .moise.laniakea: Method void androidx.compose.runtime.snapshots.SnapshotStateList.update(boolean, kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+10-16 08:40:38.754  4741  4741 W .moise.laniakea: Method void androidx.compose.runtime.snapshots.SnapshotStateList.update$default(androidx.compose.runtime.snapshots.SnapshotStateList, boolean, kotlin.jvm.functions.Function1, int, java.lang.Object) failed lock verification and will run slower.
+10-16 08:40:39.510  4741  4793 W OpenGLRenderer: Failed to initialize 101010-2 format, error = EGL_SUCCESS
+10-16 08:40:40.400  4741  4741 W .moise.laniakea: Accessing hidden method Landroid/media/AudioTrack;->getLatency()I (unsupported, reflection, allowed)
+10-16 08:40:40.556  4741  4741 W MediaSessionCompat: Couldn't find a unique registered media button receiver in the given context.
+10-16 08:40:40.765  4741  4811 E MediaMetadataRetrieverJNI: getEmbeddedPicture: Call to getEmbeddedPicture failed.
+10-16 08:40:52.826  4741  4818 E MediaMetadataRetrieverJNI: getEmbeddedPicture: Call to getEmbeddedPicture failed.
+10-16 08:40:52.832  4741  4810 E MediaMetadataRetrieverJNI: getEmbeddedPicture: Call to getEmbeddedPicture failed.
+10-16 08:40:58.894  4741  4741 W WindowOnBackDispatcher: OnBackInvokedCallback is not enabled for the application.
+10-16 08:40:58.894  4741  4741 W WindowOnBackDispatcher: Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+10-16 08:40:59.007  4741  4818 E MediaMetadataRetrieverJNI: getEmbeddedPicture: Call to getEmbeddedPicture failed.

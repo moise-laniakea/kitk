@@ -1,0 +1,7 @@
+Starting: Intent { cmp=com.moise.laniakea/.MainActivity }
+Status: ok
+LaunchState: COLD
+Activity: com.moise.laniakea/.MainActivity
+TotalTime: 3196
+WaitTime: 3206
+Complete

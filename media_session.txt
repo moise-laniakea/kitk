@@ -1,0 +1,11 @@
+      package=com.moise.laniakea
+      state=PlaybackState {state=STOPPED(1), position=5007, buffered position=5000, speed=0.0, updated=84022, actions=7339999, custom actions=[], active item id=0, error=null}
+      metadata: size=7, description=test_tone, Music, null
+      state=PlaybackState {state=ERROR(7), position=0, buffered position=0, speed=0.0, updated=27829, actions=0, custom actions=[], active item id=-1, error=Bluetooth audio disconnected}
+      state=PlaybackState {state=ERROR(7), position=0, buffered position=0, speed=0.0, updated=27840, actions=0, custom actions=[], active item id=-1, error=Bluetooth audio disconnected}
+      state=PlaybackState {state=ERROR(7), position=0, buffered position=0, speed=0.0, updated=29768, actions=0, custom actions=[], active item id=-1, error=Bluetooth audio disconnected}
+      state=PlaybackState {state=ERROR(7), position=0, buffered position=0, speed=0.0, updated=29948, actions=0, custom actions=[], active item id=-1, error=Bluetooth audio disconnected}
+      state=PlaybackState {state=NONE(0), position=0, buffered position=0, speed=1.0, updated=31815, actions=8192, custom actions=[], active item id=-1, error=null}
+      state=PlaybackState {state=NONE(0), position=0, buffered position=0, speed=0.0, updated=34431, actions=2409991, custom actions=[Action:mName='Rewind 10 seconds, mIcon=2131234345, mExtras=null, Action:mName='Fast forward 30 second, mIcon=2131234125, mExtras=null, Action:mName='Skip to next episode, mIcon=2131234405, mExtras=null], active item id=-1, error=null}
+      metadata: size=0, description=null, null, null
+      state=PlaybackState {state=ERROR(7), position=0, buffered position=0, speed=1.0, updated=36350, actions=11828, custom actions=[], active item id=-1, error=Please sign in to YouTube Music.}

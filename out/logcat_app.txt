@@ -1,0 +1,57 @@
+--------- beginning of main
+10-16 08:40:37.115  4741  4741 I .moise.laniakea: Late-enabling -Xcheck:jni
+10-16 08:40:37.174  4741  4741 I .moise.laniakea: Using CollectorTypeCC GC.
+10-16 08:40:37.178  4741  4741 W .moise.laniakea: Unexpected CPU variant for x86: x86_64.
+10-16 08:40:37.178  4741  4741 W .moise.laniakea: Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, tremont, kabylake, default
+10-16 08:40:37.393  4741  4741 D CompatibilityChangeReporter: Compat change id reported: 171979766; UID 10192; state: ENABLED
+10-16 08:40:37.393  4741  4741 D CompatibilityChangeReporter: Compat change id reported: 242716250; UID 10192; state: ENABLED
+10-16 08:40:37.407  4741  4741 W ziparchive: Unable to open '/data/app/~~uxl0G4ohBss3uQ2HK6ehpA==/com.moise.laniakea-CL208cJv6hgXnE6uZ27JwA==/base.dm': No such file or directory
+10-16 08:40:37.407  4741  4741 W ziparchive: Unable to open '/data/app/~~uxl0G4ohBss3uQ2HK6ehpA==/com.moise.laniakea-CL208cJv6hgXnE6uZ27JwA==/base.dm': No such file or directory
+10-16 08:40:38.102  4741  4741 D nativeloader: Configuring clns-6 for other apk /data/app/~~uxl0G4ohBss3uQ2HK6ehpA==/com.moise.laniakea-CL208cJv6hgXnE6uZ27JwA==/base.apk. target_sdk_version=35, uses_libraries=, library_path=/data/app/~~uxl0G4ohBss3uQ2HK6ehpA==/com.moise.laniakea-CL208cJv6hgXnE6uZ27JwA==/lib/x86_64:/data/app/~~uxl0G4ohBss3uQ2HK6ehpA==/com.moise.laniakea-CL208cJv6hgXnE6uZ27JwA==/base.apk!/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/com.moise.laniakea
+10-16 08:40:38.117  4741  4741 V GraphicsEnvironment: Currently set values for:
+10-16 08:40:38.117  4741  4741 V GraphicsEnvironment:   angle_gl_driver_selection_pkgs=[]
+10-16 08:40:38.117  4741  4741 V GraphicsEnvironment:   angle_gl_driver_selection_values=[]
+10-16 08:40:38.118  4741  4741 V GraphicsEnvironment: ANGLE GameManagerService for com.moise.laniakea: false
+10-16 08:40:38.118  4741  4741 V GraphicsEnvironment: com.moise.laniakea is not listed in per-application setting
+10-16 08:40:38.118  4741  4741 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+10-16 08:40:38.197  4741  4795 D libEGL  : loaded /vendor/lib64/egl/libEGL_emulation.so
+10-16 08:40:38.198  4741  4795 D libEGL  : loaded /vendor/lib64/egl/libGLESv1_CM_emulation.so
+10-16 08:40:38.199  4741  4795 D libEGL  : loaded /vendor/lib64/egl/libGLESv2_emulation.so
+10-16 08:40:38.268  4741  4741 D CompatibilityChangeReporter: Compat change id reported: 237531167; UID 10192; state: DISABLED
+10-16 08:40:38.271  4741  4741 W OpenGLRenderer: Unknown dataspace 0
+10-16 08:40:38.744  4741  4741 W .moise.laniakea: Method boolean androidx.compose.runtime.snapshots.SnapshotStateList.conditionalUpdate(boolean, kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+10-16 08:40:38.744  4741  4741 W .moise.laniakea: Common causes for lock verification issues are non-optimized dex code
+10-16 08:40:38.744  4741  4741 W .moise.laniakea: and incorrect proguard optimizations.
+10-16 08:40:38.753  4741  4741 W .moise.laniakea: Method boolean androidx.compose.runtime.snapshots.SnapshotStateList.conditionalUpdate$default(androidx.compose.runtime.snapshots.SnapshotStateList, boolean, kotlin.jvm.functions.Function1, int, java.lang.Object) failed lock verification and will run slower.
+10-16 08:40:38.753  4741  4741 W .moise.laniakea: Method java.lang.Object androidx.compose.runtime.snapshots.SnapshotStateList.mutate(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+10-16 08:40:38.753  4741  4741 W .moise.laniakea: Method void androidx.compose.runtime.snapshots.SnapshotStateList.update(boolean, kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+10-16 08:40:38.754  4741  4741 W .moise.laniakea: Method void androidx.compose.runtime.snapshots.SnapshotStateList.update$default(androidx.compose.runtime.snapshots.SnapshotStateList, boolean, kotlin.jvm.functions.Function1, int, java.lang.Object) failed lock verification and will run slower.
+10-16 08:40:38.823  4741  4741 I MediaController: Init 7b243d6 [AndroidXMedia3/1.5.1] [emu64xa, sdk_gphone64_x86_64, Google, 34]
+10-16 08:40:39.366  4741  4811 I MoiseScan: Scan: MediaStore rows=1, new=1, already indexed=0, duplicates=0
+10-16 08:40:39.510  4741  4793 W OpenGLRenderer: Failed to initialize 101010-2 format, error = EGL_SUCCESS
+10-16 08:40:39.560  4741  4793 I Gralloc4: mapper 4.x is not supported
+10-16 08:40:40.055  4741  4832 I OpenGLRenderer: Davey! duration=1877ms; Flags=1, FrameTimelineVsyncId=4914, IntendedVsync=63996010931, Vsync=64096010927, InputEventId=0, HandleInputStart=64103971987, AnimationStart=64103974190, PerformTraversalsStart=64104046127, DrawStart=65451255776, FrameDeadline=64012677597, FrameInterval=64103880962, FrameStartTime=16666666, SyncQueued=65478321390, SyncStart=65483806093, IssueDrawCommandsStart=65484332406, SwapBuffers=65718884261, FrameCompleted=65879189871, DequeueBufferDuration=2284, QueueBufferDuration=186978, GpuCompleted=65879126437, SwapBuffersCompleted=65879189871, DisplayPresentTime=0, CommandSubmissionCompleted=65718884261, 
+10-16 08:40:40.101  4741  4741 I Choreographer: Skipped 103 frames!  The application may be doing too much work on its main thread.
+10-16 08:40:40.240  4741  4832 I OpenGLRenderer: Davey! duration=1866ms; Flags=0, FrameTimelineVsyncId=4965, IntendedVsync=64196010923, Vsync=65912677521, InputEventId=0, HandleInputStart=65929066324, AnimationStart=65929068958, PerformTraversalsStart=65939942267, DrawStart=65940115515, FrameDeadline=65896010855, FrameInterval=65928839167, FrameStartTime=16666666, SyncQueued=65994016986, SyncStart=65994031838, IssueDrawCommandsStart=65994071587, SwapBuffers=65999996264, FrameCompleted=66062775834, DequeueBufferDuration=2023, QueueBufferDuration=108722, GpuCompleted=66062775834, SwapBuffersCompleted=66056753081, DisplayPresentTime=0, CommandSubmissionCompleted=65999996264, 
+10-16 08:40:40.252  4741  4741 I ExoPlayerImpl: Init 2f62132 [AndroidXMedia3/1.5.1] [emu64xa, sdk_gphone64_x86_64, Google, 34]
+10-16 08:40:40.400  4741  4741 W .moise.laniakea: Accessing hidden method Landroid/media/AudioTrack;->getLatency()I (unsupported, reflection, allowed)
+10-16 08:40:40.503  4741  4741 D CompatibilityChangeReporter: Compat change id reported: 160794467; UID 10192; state: ENABLED
+10-16 08:40:40.519  4741  4741 I MediaSessionImpl: Init 63a9718 [AndroidXMedia3/1.5.1] [emu64xa, sdk_gphone64_x86_64, Google, 34]
+10-16 08:40:40.556  4741  4741 W MediaSessionCompat: Couldn't find a unique registered media button receiver in the given context.
+10-16 08:40:40.717  4741  4741 I MediaController: Init c013130 [AndroidXMedia3/1.5.1] [emu64xa, sdk_gphone64_x86_64, Google, 34]
+10-16 08:40:40.765  4741  4811 E MediaMetadataRetrieverJNI: getEmbeddedPicture: Call to getEmbeddedPicture failed.
+10-16 08:40:43.313  4741  5001 D ProfileInstaller: Installing profile for com.moise.laniakea
+10-16 08:40:52.714  4741  4793 D EGL_emulation: app_time_stats: avg=2526.32ms min=9.58ms max=11902.56ms count=5
+10-16 08:40:52.826  4741  4818 E MediaMetadataRetrieverJNI: getEmbeddedPicture: Call to getEmbeddedPicture failed.
+10-16 08:40:52.832  4741  4810 E MediaMetadataRetrieverJNI: getEmbeddedPicture: Call to getEmbeddedPicture failed.
+10-16 08:40:53.185  4741  4959 D AudioTrack: getTimestamp_l(15): device stall time corrected using current time 79012886438
+10-16 08:40:53.793  4741  4793 D EGL_emulation: app_time_stats: avg=119.93ms min=17.56ms max=251.44ms count=9
+10-16 08:40:54.804  4741  4793 D EGL_emulation: app_time_stats: avg=252.12ms min=244.89ms max=258.80ms count=4
+10-16 08:40:55.828  4741  4793 D EGL_emulation: app_time_stats: avg=255.84ms min=248.80ms max=264.84ms count=4
+10-16 08:40:57.060  4741  4793 D EGL_emulation: app_time_stats: avg=246.30ms min=240.65ms max=248.82ms count=5
+10-16 08:40:57.755  4741  4959 D AudioTrack: stop(15): called with 220500 frames delivered
+10-16 08:40:58.228  4741  4793 D EGL_emulation: app_time_stats: avg=233.72ms min=168.94ms max=250.76ms count=5
+10-16 08:40:58.894  4741  4741 W WindowOnBackDispatcher: OnBackInvokedCallback is not enabled for the application.
+10-16 08:40:58.894  4741  4741 W WindowOnBackDispatcher: Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+10-16 08:40:59.007  4741  4818 E MediaMetadataRetrieverJNI: getEmbeddedPicture: Call to getEmbeddedPicture failed.
+10-16 08:41:04.462  4741  4793 D EGL_emulation: app_time_stats: avg=3116.83ms min=923.74ms max=5309.93ms count=2
