@@ -1,0 +1,65 @@
+name: Build APK
+
+on:
+  push:
+    branches: [gramophone]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Set release type
+        run: echo releaseType=SelfBuilt > package.properties
+
+      # Gramophone targets API 37; make sure the platform and licences are present.
+      - name: Install Android SDK platform
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37" || true
+
+      - name: Build debug APK
+        run: |
+          set -o pipefail
+          ./gradlew assembleDebug --stacktrace --console=plain 2>&1 | tee build.log
+
+      - name: Save build errors
+        if: failure()
+        run: |
+          {
+            echo "run: ${{ github.run_id }}  commit: ${{ github.sha }}"
+            echo "=== errors ==="
+            grep -nE "^e: |error:|FAILED|What went wrong|Could not (resolve|find|get)|Caused by|not found|No version" build.log | head -300
+            echo "=== last 150 lines ==="
+            grep -vE '^\s+at |^\s+\.\.\. [0-9]+ more' build.log | tail -150
+          } > errors.txt
+          git config user.name "build-bot"
+          git config user.email "build-bot@users.noreply.github.com"
+          git checkout --orphan build-logs-gramophone
+          git rm -rf --quiet . || true
+          mv errors.txt ERRORS.txt
+          git add ERRORS.txt
+          git commit -q -m "build errors for ${{ github.sha }}"
+          git push -f origin build-logs-gramophone
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gramophone-base-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
