@@ -38,6 +38,7 @@ adb shell input tap $((W/2)) $((H*93/100))
 sleep 4
 adb exec-out screencap -p > out/shot3_now_playing.png
 
+adb logcat -d -s MoiseScan:V > out/logcat_scan.txt 2>&1
 PID=$(adb shell pidof $PKG | tr -d '\r')
 adb logcat -d --pid=$PID > out/logcat_app.txt 2>&1
 adb logcat -d -t 3000 > out/logcat_full.txt

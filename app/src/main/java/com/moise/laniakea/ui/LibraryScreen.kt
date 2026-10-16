@@ -182,6 +182,8 @@ private fun EmptyLibrary(vm: AppViewModel) {
     Column(Modifier.fillMaxSize(), Arrangement.Center, Alignment.CenterHorizontally) {
         Text("No music found", style = MaterialTheme.typography.titleMedium)
         Text("Grant audio access, then rescan.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        val info by vm.library.scanInfo.collectAsState()
+        Text(info, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(16.dp))
         TextButton({ vm.library.rescan() }) { Text("Rescan") }
     }
 }

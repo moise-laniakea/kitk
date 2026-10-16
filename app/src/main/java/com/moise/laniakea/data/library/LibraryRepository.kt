@@ -35,6 +35,8 @@ class LibraryRepository(
 
     val scanning = MutableStateFlow(false)
     val scanError = MutableStateFlow<String?>(null)
+    /** Human-readable summary of the last scan, shown on the empty-library screen to help diagnose problems. */
+    val scanInfo = MutableStateFlow("Not scanned yet")
     val scanProgress = MutableStateFlow(0 to 0)
 
     // ---- Observable library (whitelist / exclusion filtered, sorted) ---------------------------
@@ -179,7 +181,11 @@ class LibraryRepository(
             scanning.value = true
             scanError.value = null
             try { indexNow() }
-            catch (e: Throwable) { scanError.value = "Library scan failed: ${e.javaClass.simpleName}: ${e.message}" }
+            catch (e: Throwable) {
+                android.util.Log.e("MoiseScan", "scan failed", e)
+                scanError.value = "Library scan failed: ${e.javaClass.simpleName}: ${e.message}"
+                scanInfo.value = scanError.value!!
+            }
             finally { scanning.value = false }
         }
     }
@@ -190,6 +196,7 @@ class LibraryRepository(
         val knownKeys = songDao.allDedupKeys().toHashSet()
         val seenPaths = HashSet<String>()
         val batch = ArrayList<SongEntity>()
+        var rowsSeen = 0; var alreadyKnown = 0; var duplicates = 0; var inserted = 0; var queryRows = -1
 
         val uri = MediaStore.Files.getContentUri("external")
         val cols = buildList {
@@ -206,6 +213,7 @@ class LibraryRepository(
         val selection = "(${MediaStore.Files.FileColumns.MEDIA_TYPE} = ${MediaStore.Files.FileColumns.MEDIA_TYPE_AUDIO} OR $extClause)"
 
         context.contentResolver.query(uri, cols, selection, null, null)?.use { c ->
+            queryRows = c.count
             scanProgress.value = 0 to c.count
             val iId = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
             val iData = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA)
@@ -225,14 +233,14 @@ class LibraryRepository(
 
             var n = 0
             while (c.moveToNext()) {
-                n++
+                n++; rowsSeen++
                 if (n % 50 == 0) scanProgress.value = n to c.count
                 val path = c.getString(iData) ?: continue
                 val folder = path.substringBeforeLast('/', "")
                 if (s.folderExclusions.any { folder.startsWith(it) }) continue
                 if (s.folderWhitelist.isNotEmpty() && s.folderWhitelist.none { folder.startsWith(it) }) continue
                 seenPaths += path
-                if (path in knownPaths) continue          // already indexed; incremental scan
+                if (path in knownPaths) { alreadyKnown++; continue }          // already indexed; incremental scan
 
                 val id = c.getLong(iId)
                 val itemUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
@@ -265,7 +273,7 @@ class LibraryRepository(
                 // Deduplicate by tag identity + whole-second duration (same song copied to two folders).
                 val durationMs = c.getLong(iDur)
                 val key = "${title.lowercase()}|${artist.lowercase()}|${album.lowercase()}|${durationMs / 1000}"
-                if (!knownKeys.add(key)) continue
+                if (!knownKeys.add(key)) { duplicates++; continue }
 
                 batch += SongEntity(
                     uri = itemUri.toString(), path = path, folder = folder, title = title, artist = artist,
@@ -274,10 +282,14 @@ class LibraryRepository(
                     extension = ext, size = c.getLong(iSize), dateAdded = c.getLong(iAdded),
                     dateModified = c.getLong(iMod), dedupKey = key, hasEmbeddedLyrics = lyrics,
                 )
+                inserted++
                 if (batch.size >= 200) { songDao.upsertAll(batch.toList()); batch.clear() }
             }
         }
         if (batch.isNotEmpty()) songDao.upsertAll(batch)
+        val info = "Scan: MediaStore rows=$queryRows, new=$inserted, already indexed=$alreadyKnown, duplicates=$duplicates"
+        android.util.Log.i("MoiseScan", info)
+        scanInfo.value = info
 
         // Remove rows for files that vanished.
         val gone = knownPaths.filter { it !in seenPaths }
