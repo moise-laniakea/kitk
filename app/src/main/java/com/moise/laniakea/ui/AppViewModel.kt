@@ -76,6 +76,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     init {
         player.connect()
         app.library.rescan()
+        viewModelScope.launch { library.scanError.collect { e -> if (e != null) toast.value = e } }
         viewModelScope.launch {
             nowPlaying.distinctUntilChangedBy { it.songId }.collect { np ->
                 lyrics.value = null

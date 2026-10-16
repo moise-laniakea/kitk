@@ -56,3 +56,48 @@ jobs:
           name: MoiseLaniakea-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+  smoke-test:
+    needs: build
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: MoiseLaniakea-debug-apk
+          path: apk
+
+      - name: Make a test song
+        run: python3 ci/make_wav.py
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run the app on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: bash ci/smoke.sh
+
+      - name: Publish smoke test results
+        if: always()
+        run: |
+          mkdir -p /tmp/results && cp -r out/. /tmp/results/ 2>/dev/null || echo "no output produced" > /tmp/results/NOTHING.txt
+          echo "commit: ${{ github.sha }}" > /tmp/results/COMMIT.txt
+          git config user.name "build-bot"
+          git config user.email "build-bot@users.noreply.github.com"
+          git checkout --orphan smoke-logs
+          git rm -rf --quiet . || true
+          cp -r /tmp/results/. .
+          git add -A
+          git commit -q -m "smoke test for ${{ github.sha }}"
+          git push -f origin smoke-logs

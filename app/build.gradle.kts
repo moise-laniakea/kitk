@@ -16,7 +16,7 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         // Small footprint: ship only the ABIs that matter for phones.
-        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
 
     buildTypes {

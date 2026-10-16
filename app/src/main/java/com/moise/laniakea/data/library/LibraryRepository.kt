@@ -34,6 +34,7 @@ class LibraryRepository(
     private val playlistDao = db.playlists()
 
     val scanning = MutableStateFlow(false)
+    val scanError = MutableStateFlow<String?>(null)
     val scanProgress = MutableStateFlow(0 to 0)
 
     // ---- Observable library (whitelist / exclusion filtered, sorted) ---------------------------
@@ -176,7 +177,10 @@ class LibraryRepository(
         if (scanning.value) return
         scope.launch(Dispatchers.IO) {
             scanning.value = true
-            try { indexNow() } finally { scanning.value = false }
+            scanError.value = null
+            try { indexNow() }
+            catch (e: Throwable) { scanError.value = "Library scan failed: ${e.javaClass.simpleName}: ${e.message}" }
+            finally { scanning.value = false }
         }
     }
 
@@ -196,7 +200,6 @@ class LibraryRepository(
             add(MediaStore.Audio.Media.DURATION); add(MediaStore.Files.FileColumns.MIME_TYPE)
             add(MediaStore.Files.FileColumns.SIZE); add(MediaStore.Files.FileColumns.DATE_ADDED)
             add(MediaStore.Files.FileColumns.DATE_MODIFIED)
-            if (Build.VERSION.SDK_INT >= 30) { add(MediaStore.Audio.Media.GENRE); add(MediaStore.Audio.Media.ALBUM_ARTIST) }
         }.toTypedArray()
 
         val extClause = extraExtensions.joinToString(" OR ") { "${MediaStore.Files.FileColumns.DISPLAY_NAME} LIKE '%.$it'" }
@@ -217,8 +220,8 @@ class LibraryRepository(
             val iSize = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
             val iAdded = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_ADDED)
             val iMod = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
-            val iGenre = if (Build.VERSION.SDK_INT >= 30) c.getColumnIndex(MediaStore.Audio.Media.GENRE) else -1
-            val iAA = if (Build.VERSION.SDK_INT >= 30) c.getColumnIndex(MediaStore.Audio.Media.ALBUM_ARTIST) else -1
+            val iGenre = -1   // genre and album artist come from TagLib below
+            val iAA = -1
 
             var n = 0
             while (c.moveToNext()) {

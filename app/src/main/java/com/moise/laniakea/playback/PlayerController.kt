@@ -67,8 +67,8 @@ class PlayerController(private val context: Context, private val scope: Coroutin
             while (pending.isNotEmpty()) pending.removeFirst()(c)
             startPositionTicker()
         }, MoreExecutors.directExecutor())
-        // Make sure the service is alive for background playback.
-        ContextCompat.startForegroundService(context, Intent(context, PlaybackService::class.java))
+        // Binding the MediaController starts PlaybackService; Media3 promotes it to foreground once playback begins.
+        // (Calling startForegroundService here crashes the app: the service never calls startForeground while idle.)
     }
 
     fun release() {
