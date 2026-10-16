@@ -101,19 +101,26 @@ fun LibraryScreen(vm: AppViewModel, onImportPlaylist: () -> Unit) {
             if (vm.selecting) SelectionBar(vm, songs) else TopAppBar(
                 title = {
                     if (searching) OutlinedTextField(query, { query = it }, singleLine = true, placeholder = { Text("Search") }, modifier = Modifier.fillMaxWidth())
-                    else Text("Moïse Laniākea")
+                    else Text("Moïse Laniākea", maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleLarge)
                 },
                 actions = {
                     IconButton({ searching = !searching; if (!searching) query = "" }) {
                         Icon(if (searching) Icons.Default.Close else Icons.Default.Search, "Search")
                     }
-                    IconButton({ vm.shuffleAll(songs) }) { Icon(Icons.Default.Shuffle, "Shuffle all") }
-                    IconButton({ vm.settingsRepo.update { it.grid(!settings.gridView) } }) {
-                        Icon(if (settings.gridView) Icons.Default.ViewList else Icons.Default.GridView, "List or grid")
-                    }
                     Box {
-                        IconButton({ sortMenu = true }) { Icon(Icons.Default.Sort, "Sort") }
+                        IconButton({ sortMenu = true }) { Icon(Icons.Default.Sort, "Sort and view") }
                         DropdownMenu(sortMenu, { sortMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Shuffle all") },
+                                leadingIcon = { Icon(Icons.Default.Shuffle, null) },
+                                onClick = { vm.shuffleAll(songs); sortMenu = false },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(if (settings.gridView) "Show as list" else "Show as grid") },
+                                leadingIcon = { Icon(if (settings.gridView) Icons.Default.ViewList else Icons.Default.GridView, null) },
+                                onClick = { vm.settingsRepo.update { it.grid(!settings.gridView) }; sortMenu = false },
+                            )
+                            androidx.compose.material3.HorizontalDivider()
                             SortMode.values().forEach { m ->
                                 DropdownMenuItem(
                                     text = { Text(m.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() } + if (settings.sortMode == m) (if (settings.sortDescending) " ▼" else " ▲") else "") },
