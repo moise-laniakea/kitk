@@ -3,8 +3,10 @@
 Offline Android music player. Kotlin, Jetpack Compose (Material 3 / Material You), Media3 ExoPlayer, Room, TagLib.
 Package `com.moise.laniakea`, minSdk 26, targetSdk 35.
 
-**Status: first draft, never compiled.** It was written without an Android SDK, so expect a handful of compile
-errors on the first build (mostly imports and library API drift). Nothing has been run on a device.
+**Status: compiles, not yet tested on a device.** GitHub Actions builds a debug APK from this repo on every push
+(Actions tab → latest run → Artifacts → `MoiseLaniakea-debug-apk`). Nobody has run it on a phone yet, so expect runtime bugs.
+Build settings that were needed: Kotlin 2.2.21 + KSP 2.2.21-2.0.5 + Room 2.7.2 and `compileSdk 36`, because TagLib 1.0.5 requires them.
+If a build fails, the workflow writes the errors to `ERRORS.txt` on the `build-logs` branch.
 
 ## Build
 
@@ -53,8 +55,7 @@ This is the largest contributor to APK size, so keep the decoder list short.
 
 ## Known gaps and things to verify
 
-- **TagLib API**: `data/tags/TagIO.kt` targets `com.kyant.taglib:taglib:1.0.2`. Check the method names and file-descriptor
-  ownership against that library's current README; adjust if the build complains.
+- **TagLib**: `data/tags/TagIO.kt` uses `io.github.kyant0:taglib:1.0.5`. It compiles, but tag reading and writing are untested on real files.
 - **Formats MediaStore ignores**: on Android 13+ MediaStore may not list .ape, .tak, .mka, .dsf/.dff at all. The indexer
   asks for them by extension, but a direct file-system scanner (with the "all files" permission) is not written.
 - **Cue sheets**: parsed into entries with start offsets, but playback of a single-file CUE as separate tracks (clipping) is not wired up yet.
@@ -62,4 +63,4 @@ This is the largest contributor to APK size, so keep the decoder list short.
 - **Tag writing on Android 11+**: the editor requests write access, then you tap Save again.
 - **Custom sort** currently sorts by library id; drag-to-reorder for the main list is not implemented (playlists and the queue have up/down buttons).
 - Several wishlist items are basic versions: ringtone cutter has a range slider but no waveform, Now Playing themes are four simple layouts.
-- No tests were written or run.
+- No tests were written or run. The debug APK is large; a signed release build (R8 on) would be much smaller.
