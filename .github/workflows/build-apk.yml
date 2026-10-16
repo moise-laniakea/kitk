@@ -5,6 +5,9 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,7 +25,30 @@ jobs:
           gradle-version: 8.11.1
 
       - name: Build debug APK
-        run: gradle assembleDebug --stacktrace
+        id: build
+        run: |
+          set -o pipefail
+          gradle assembleDebug --stacktrace --console=plain 2>&1 | tee build.log
+
+      # On failure, publish the compiler errors to a branch so they can be read without downloading logs.
+      - name: Save build errors
+        if: failure()
+        run: |
+          {
+            echo "run: ${{ github.run_id }}  commit: ${{ github.sha }}"
+            echo "=== errors ==="
+            grep -nE "^e: |^w: .*(Unresolved|error)|error:|FAILED|What went wrong|Could not (resolve|find|get)|Caused by" build.log | head -300
+            echo "=== last 120 lines ==="
+            tail -120 build.log
+          } > errors.txt
+          git config user.name "build-bot"
+          git config user.email "build-bot@users.noreply.github.com"
+          git checkout --orphan build-logs
+          git rm -rf --quiet . || true
+          mv errors.txt ERRORS.txt
+          git add ERRORS.txt
+          git commit -q -m "build errors for ${{ github.sha }}"
+          git push -f origin build-logs
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
