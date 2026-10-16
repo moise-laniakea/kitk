@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.moise.laniakea"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.moise.laniakea"

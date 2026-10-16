@@ -13,7 +13,7 @@ coil = "2.7.0"
 palette = "1.0.0"
 documentfile = "1.0.1"
 datastore = "1.1.1"
-taglib = "1.0.6"
+taglib = "1.0.5"
 core = "1.15.0"
 
 [libraries]
