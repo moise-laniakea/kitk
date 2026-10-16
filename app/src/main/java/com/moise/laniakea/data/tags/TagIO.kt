@@ -6,7 +6,7 @@ import com.kyant.taglib.Picture
 import com.kyant.taglib.TagLib
 
 /**
- * Thin wrapper around TagLib (via com.kyant.taglib) so the rest of the app never touches
+ * Thin wrapper around TagLib (io.github.kyant0:taglib) so the rest of the app never touches
  * the native API directly. Multi-valued fields (e.g. two artists) are real multi-value
  * properties, which is what "dual-artist" support means at the file level.
  *
@@ -85,7 +85,7 @@ object TagIO {
 
     fun readCover(context: Context, uri: Uri): ByteArray? = runCatching {
         context.contentResolver.openFileDescriptor(uri, R)?.use { pfd ->
-            TagLib.getFrontCover(pfd.dup().detachFd())?.data
+            TagLib.getPictures(pfd.dup().detachFd())?.firstOrNull()?.data
         }
     }.getOrNull()
 

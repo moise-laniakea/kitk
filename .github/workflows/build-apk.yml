@@ -38,8 +38,8 @@ jobs:
             echo "run: ${{ github.run_id }}  commit: ${{ github.sha }}"
             echo "=== errors ==="
             grep -nE "^e: |^w: .*(Unresolved|error)|error:|FAILED|What went wrong|Could not (resolve|find|get)|Caused by" build.log | head -300
-            echo "=== last 120 lines ==="
-            tail -120 build.log
+            echo "=== last 150 lines (stack frames removed) ==="
+            grep -vE '^\s+at |^\s+\.\.\. [0-9]+ more' build.log | tail -150
           } > errors.txt
           git config user.name "build-bot"
           git config user.email "build-bot@users.noreply.github.com"
