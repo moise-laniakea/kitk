@@ -173,8 +173,6 @@ class LibraryRepository(
 
     // ---- Indexing (MediaStore direct access + TagLib enrichment + dedup) -------------------------
 
-    private val extraExtensions = listOf("ape", "tak", "mka", "dsf", "dff", "opus", "alac", "m4a", "wv", "flac", "ogg")
-
     fun rescan() {
         if (scanning.value) return
         scope.launch(Dispatchers.IO) {
@@ -190,104 +188,128 @@ class LibraryRepository(
         }
     }
 
+    /** One file as reported by MediaStore, before TagLib enrichment. */
+    private class Raw(
+        val uri: Uri, val path: String, val name: String, val title: String, val artist: String, val album: String,
+        val year: Int, val track: Int, val durationMs: Long, val mime: String, val size: Long, val added: Long, val modified: Long,
+    )
+
+    private fun queryAudio(): List<Raw> {
+        // The audio view has every audio column. Ringtones, alarms and notifications are not music.
+        val cols = arrayOf(
+            MediaStore.Audio.Media._ID, MediaStore.Audio.Media.DATA, MediaStore.Audio.Media.DISPLAY_NAME,
+            MediaStore.Audio.Media.TITLE, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM,
+            MediaStore.Audio.Media.YEAR, MediaStore.Audio.Media.TRACK, MediaStore.Audio.Media.DURATION,
+            MediaStore.Audio.Media.MIME_TYPE, MediaStore.Audio.Media.SIZE, MediaStore.Audio.Media.DATE_ADDED,
+            MediaStore.Audio.Media.DATE_MODIFIED,
+        )
+        val selection = "${MediaStore.Audio.Media.IS_RINGTONE} = 0 AND ${MediaStore.Audio.Media.IS_NOTIFICATION} = 0 AND ${MediaStore.Audio.Media.IS_ALARM} = 0"
+        val base = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        val out = ArrayList<Raw>()
+        context.contentResolver.query(base, cols, selection, null, null)?.use { c ->
+            while (c.moveToNext()) {
+                val path = c.getString(1) ?: continue
+                out += Raw(
+                    ContentUris.withAppendedId(base, c.getLong(0)), path, c.getString(2).orEmpty(), c.getString(3).orEmpty(),
+                    c.getString(4).orEmpty().takeUnless { it == "<unknown>" }.orEmpty(),
+                    c.getString(5).orEmpty().takeUnless { it == "<unknown>" }.orEmpty(),
+                    c.getInt(6), c.getInt(7) % 1000, c.getLong(8), c.getString(9).orEmpty(), c.getLong(10), c.getLong(11), c.getLong(12),
+                )
+            }
+        }
+        return out
+    }
+
+    /** Formats Android does not file as audio (APE, TAK, MKA, DSD ...): ask the general files table, minimal columns only. */
+    private fun queryExtraFormats(): List<Raw> {
+        val base = MediaStore.Files.getContentUri("external")
+        val cols = arrayOf(
+            MediaStore.Files.FileColumns._ID, MediaStore.Files.FileColumns.DATA, MediaStore.Files.FileColumns.DISPLAY_NAME,
+            MediaStore.Files.FileColumns.MIME_TYPE, MediaStore.Files.FileColumns.SIZE,
+            MediaStore.Files.FileColumns.DATE_ADDED, MediaStore.Files.FileColumns.DATE_MODIFIED,
+        )
+        val ext = listOf("ape", "tak", "mka", "dsf", "dff", "wv", "alac").joinToString(" OR ") { "${MediaStore.Files.FileColumns.DISPLAY_NAME} LIKE '%.$it'" }
+        val selection = "${MediaStore.Files.FileColumns.MEDIA_TYPE} != ${MediaStore.Files.FileColumns.MEDIA_TYPE_AUDIO} AND ($ext)"
+        val out = ArrayList<Raw>()
+        context.contentResolver.query(base, cols, selection, null, null)?.use { c ->
+            while (c.moveToNext()) {
+                val path = c.getString(1) ?: continue
+                val name = c.getString(2).orEmpty()
+                val uri = ContentUris.withAppendedId(base, c.getLong(0))
+                out += Raw(uri, path, name, name.substringBeforeLast('.'), "", "", 0, 0, probeDuration(uri), c.getString(3).orEmpty(), c.getLong(4), c.getLong(5), c.getLong(6))
+            }
+        }
+        return out
+    }
+
+    private fun probeDuration(uri: Uri): Long {
+        val r = android.media.MediaMetadataRetriever()
+        return try {
+            r.setDataSource(context, uri)
+            r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+        } catch (_: Exception) { 0L } finally { runCatching { r.release() } }
+    }
+
     private suspend fun indexNow() {
         val s = settingsRepo.settings.value
         val knownPaths = songDao.allPaths().toHashSet()
         val knownKeys = songDao.allDedupKeys().toHashSet()
         val seenPaths = HashSet<String>()
         val batch = ArrayList<SongEntity>()
-        var rowsSeen = 0; var alreadyKnown = 0; var duplicates = 0; var inserted = 0; var queryRows = -1
+        var alreadyKnown = 0; var duplicates = 0; var inserted = 0
 
-        val uri = MediaStore.Files.getContentUri("external")
-        val cols = buildList {
-            add(MediaStore.Files.FileColumns._ID); add(MediaStore.Files.FileColumns.DATA)
-            add(MediaStore.Files.FileColumns.DISPLAY_NAME); add(MediaStore.Audio.Media.TITLE)
-            add(MediaStore.Audio.Media.ARTIST); add(MediaStore.Audio.Media.ALBUM)
-            add(MediaStore.Audio.Media.YEAR); add(MediaStore.Audio.Media.TRACK)
-            add(MediaStore.Audio.Media.DURATION); add(MediaStore.Files.FileColumns.MIME_TYPE)
-            add(MediaStore.Files.FileColumns.SIZE); add(MediaStore.Files.FileColumns.DATE_ADDED)
-            add(MediaStore.Files.FileColumns.DATE_MODIFIED)
-        }.toTypedArray()
+        val rows = queryAudio() + queryExtraFormats()
+        scanProgress.value = 0 to rows.size
 
-        val extClause = extraExtensions.joinToString(" OR ") { "${MediaStore.Files.FileColumns.DISPLAY_NAME} LIKE '%.$it'" }
-        val selection = "(${MediaStore.Files.FileColumns.MEDIA_TYPE} = ${MediaStore.Files.FileColumns.MEDIA_TYPE_AUDIO} OR $extClause)"
+        for ((n, r) in rows.withIndex()) {
+            if (n % 50 == 0) scanProgress.value = n to rows.size
+            val path = r.path
+            val folder = path.substringBeforeLast('/', "")
+            if (s.folderExclusions.any { folder.startsWith(it) }) continue
+            if (s.folderWhitelist.isNotEmpty() && s.folderWhitelist.none { folder.startsWith(it) }) continue
+            seenPaths += path
+            if (path in knownPaths) { alreadyKnown++; continue }          // already indexed; incremental scan
 
-        context.contentResolver.query(uri, cols, selection, null, null)?.use { c ->
-            queryRows = c.count
-            scanProgress.value = 0 to c.count
-            val iId = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
-            val iData = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA)
-            val iName = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
-            val iTitle = c.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
-            val iArtist = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
-            val iAlbum = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
-            val iYear = c.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
-            val iTrack = c.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
-            val iDur = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
-            val iMime = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MIME_TYPE)
-            val iSize = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
-            val iAdded = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_ADDED)
-            val iMod = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
-            val iGenre = -1   // genre and album artist come from TagLib below
-            val iAA = -1
+            val ext = r.name.substringAfterLast('.', "").lowercase()
+            var title = r.title.ifBlank { r.name.substringBeforeLast('.') }
+            var artist = r.artist
+            var albumArtist = ""
+            var album = r.album
+            var genre = ""
+            var year = r.year
+            var track = r.track
+            var disc = 0
+            var lyrics = false
 
-            var n = 0
-            while (c.moveToNext()) {
-                n++; rowsSeen++
-                if (n % 50 == 0) scanProgress.value = n to c.count
-                val path = c.getString(iData) ?: continue
-                val folder = path.substringBeforeLast('/', "")
-                if (s.folderExclusions.any { folder.startsWith(it) }) continue
-                if (s.folderWhitelist.isNotEmpty() && s.folderWhitelist.none { folder.startsWith(it) }) continue
-                seenPaths += path
-                if (path in knownPaths) { alreadyKnown++; continue }          // already indexed; incremental scan
-
-                val id = c.getLong(iId)
-                val itemUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
-                val name = c.getString(iName).orEmpty()
-                val ext = name.substringAfterLast('.', "").lowercase()
-
-                var title = c.getString(iTitle).orEmpty().ifBlank { name.substringBeforeLast('.') }
-                var artist = c.getString(iArtist).orEmpty().takeUnless { it == "<unknown>" }.orEmpty()
-                var albumArtist = if (iAA >= 0) c.getString(iAA).orEmpty() else ""
-                var album = c.getString(iAlbum).orEmpty().takeUnless { it == "<unknown>" }.orEmpty()
-                var genre = if (iGenre >= 0) c.getString(iGenre).orEmpty() else ""
-                var year = c.getInt(iYear)
-                var track = c.getInt(iTrack)
-                var disc = 0
-                var lyrics = false
-
-                // TagLib enrichment: catches formats MediaStore reads poorly (APE, TAK, MKA, DSD …).
-                TagIO.read(context, itemUri)?.let { t ->
-                    if (t.title.isNotBlank()) title = t.title
-                    if (t.artists.isNotEmpty()) artist = t.artists.joinToString("; ")
-                    if (t.albumArtists.isNotEmpty()) albumArtist = t.albumArtists.joinToString("; ")
-                    if (t.album.isNotBlank()) album = t.album
-                    if (t.genres.isNotEmpty()) genre = t.genres.joinToString("; ")
-                    if (t.year > 0) year = t.year
-                    if (t.track > 0) track = t.track
-                    disc = t.disc
-                    lyrics = t.lyrics.isNotBlank()
-                }
-
-                // Deduplicate by tag identity + whole-second duration (same song copied to two folders).
-                val durationMs = c.getLong(iDur)
-                val key = "${title.lowercase()}|${artist.lowercase()}|${album.lowercase()}|${durationMs / 1000}"
-                if (!knownKeys.add(key)) { duplicates++; continue }
-
-                batch += SongEntity(
-                    uri = itemUri.toString(), path = path, folder = folder, title = title, artist = artist,
-                    albumArtist = albumArtist, album = album, genre = genre, year = year, trackNumber = track,
-                    discNumber = disc, durationMs = durationMs, mimeType = c.getString(iMime).orEmpty(),
-                    extension = ext, size = c.getLong(iSize), dateAdded = c.getLong(iAdded),
-                    dateModified = c.getLong(iMod), dedupKey = key, hasEmbeddedLyrics = lyrics,
-                )
-                inserted++
-                if (batch.size >= 200) { songDao.upsertAll(batch.toList()); batch.clear() }
+            // TagLib enrichment: genre, album artist, disc, multi-value artists, and formats MediaStore reads poorly.
+            TagIO.read(context, r.uri)?.let { t ->
+                if (t.title.isNotBlank()) title = t.title
+                if (t.artists.isNotEmpty()) artist = t.artists.joinToString("; ")
+                if (t.albumArtists.isNotEmpty()) albumArtist = t.albumArtists.joinToString("; ")
+                if (t.album.isNotBlank()) album = t.album
+                if (t.genres.isNotEmpty()) genre = t.genres.joinToString("; ")
+                if (t.year > 0) year = t.year
+                if (t.track > 0) track = t.track
+                disc = t.disc
+                lyrics = t.lyrics.isNotBlank()
             }
+
+            // Deduplicate by tag identity + whole-second duration (same song copied to two folders).
+            val key = "${title.lowercase()}|${artist.lowercase()}|${album.lowercase()}|${r.durationMs / 1000}"
+            if (!knownKeys.add(key)) { duplicates++; continue }
+
+            batch += SongEntity(
+                uri = r.uri.toString(), path = path, folder = folder, title = title, artist = artist,
+                albumArtist = albumArtist, album = album, genre = genre, year = year, trackNumber = track,
+                discNumber = disc, durationMs = r.durationMs, mimeType = r.mime,
+                extension = ext, size = r.size, dateAdded = r.added,
+                dateModified = r.modified, dedupKey = key, hasEmbeddedLyrics = lyrics,
+            )
+            inserted++
+            if (batch.size >= 200) { songDao.upsertAll(batch.toList()); batch.clear() }
         }
         if (batch.isNotEmpty()) songDao.upsertAll(batch)
-        val info = "Scan: MediaStore rows=$queryRows, new=$inserted, already indexed=$alreadyKnown, duplicates=$duplicates"
+        val info = "Scan: MediaStore rows=${rows.size}, new=$inserted, already indexed=$alreadyKnown, duplicates=$duplicates"
         android.util.Log.i("MoiseScan", info)
         scanInfo.value = info
 
